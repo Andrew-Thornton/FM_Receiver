@@ -97,6 +97,7 @@ subcarr  =             np.cos(2 * np.pi * SUBCARR_FREQ * t)
 
 # Scale L+R and L-R to ±0.45 so headroom remains for pilot
 scale = 0.45 / max(np.max(np.abs(LpR)), np.max(np.abs(LmR)), 1e-9)
+# MPX = scale * LpR + scale * LmR * subcarr
 MPX = scale * LpR + pilot + scale * LmR * subcarr
 
 # Normalise MPX to ±1 for output
@@ -110,6 +111,14 @@ print(f"  MPX peak       : {np.max(np.abs(MPX)):.4f}")
 out_file = "fm_mpx_output.wav"
 wav.write(out_file, sample_rate, MPX.astype(np.float32))
 print(f"  Saved          : {out_file}")
+
+# ── 6b. Save L+R (LpR) as float32 WAV ────────────────────────────────────────
+
+# Normalise LpR to ±1 for a clean mono export
+LpR_norm = LpR / max(np.max(np.abs(LpR)), 1e-9)
+lpr_file = "lpr_mono_output.wav"
+wav.write(lpr_file, sample_rate, LpR_norm.astype(np.float32))
+print(f"  Saved L+R      : {lpr_file}")
 
 # ── 7. Spectrum plot ──────────────────────────────────────────────────────────
 
