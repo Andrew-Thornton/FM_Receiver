@@ -12,12 +12,19 @@ Steps:
 
 import numpy as np
 import scipy.io.wavfile as wav
-from scipy.signal import butter, sosfilt,  firwin, lfilter, resample_poly
+from scipy.signal import butter, sosfilt,  firwin, lfilter, resample_poly, hilbert
 import matplotlib.pyplot as plt
+
+
+def upsample_x2_complex(x, h):
+    up = np.zeros(len(x) * 2, dtype=np.complex64)
+    up[::2] = x
+    return lfilter(h, 1.0, up)
+
 
 # ── 1. Load WAV & print signal info ──────────────────────────────────────────
 
-filename = "my_wav.wav"
+filename = "my_wav_short.wav"
 sample_rate, data = wav.read(filename)
 
 print("=" * 50)
@@ -140,6 +147,15 @@ print(f"  Low-pass filter: {CUTOFF_HZ/1e3:.0f} kHz, Butterworth order {LPF_ORDER
 LpR = L_filt + R_filt      # L + R  (mono compatible, 0–15 kHz)
 LmR = L_filt - R_filt      # L - R  (stereo difference, modulates sub-carrier)
 
+
+# ── 6b. Save L+R (LpR) as float32 WAV ────────────────────────────────────────
+
+# Normalise LpR to ±1 for a clean mono export
+LpR_norm = LpR / max(np.max(np.abs(LpR)), 1e-9)
+lpr_file = "lpr_mono_output.wav"
+wav.write(lpr_file, sample_rate, LpR_norm.astype(np.float32))
+print(f"  Saved L+R      : {lpr_file}")
+
 # ── 5. Build MPX baseband signal ──────────────────────────────────────────────
 #
 #   MPX(t) = (L+R)
@@ -166,25 +182,41 @@ scale = 0.45 / max(np.max(np.abs(LpR)), np.max(np.abs(LmR)), 1e-9)
 # MPX = scale * LpR + scale * LmR * subcarr
 MPX = scale * LpR + pilot + scale * LmR * subcarr
 
-# Normalise MPX to ±1 for output
-MPX /= np.max(np.abs(MPX))
+# ── Convert MPX to analytic signal early ────────────────────────────────────
+MPX = MPX.astype(np.float32)
 
-print(f"  MPX samples    : {len(MPX)}")
-print(f"  MPX peak       : {np.max(np.abs(MPX)):.4f}")
+MPX_complex = hilbert(MPX).astype(np.complex64)
 
-# ── 6. Save MPX as float32 WAV ────────────────────────────────────────────────
+print("  Converted MPX → analytic (Hilbert)")
 
-out_file = "fm_mpx_output.wav"
-wav.write(out_file, sample_rate, MPX.astype(np.float32))
-print(f"  Saved          : {out_file}")
 
-# ── 6b. Save L+R (LpR) as float32 WAV ────────────────────────────────────────
+x = MPX_complex
+fs = 1_024_000
 
-# Normalise LpR to ±1 for a clean mono export
-LpR_norm = LpR / max(np.max(np.abs(LpR)), 1e-9)
-lpr_file = "lpr_mono_output.wav"
-wav.write(lpr_file, sample_rate, LpR_norm.astype(np.float32))
-print(f"  Saved L+R      : {lpr_file}")
+h = firwin(63, cutoff=0.5, window=('kaiser', 8.0), scale=True)
+
+for i in range(4):
+    x = upsample_x2_complex(x, h)
+    fs *= 2
+    print(f"×2 stage {i+1}: {fs}")
+
+x = resample_poly(x, 3, 1)
+fs *= 3
+
+x = resample_poly(x, 5, 1)
+fs *= 5
+
+iq = x
+
+iq /= np.max(np.abs(iq)) + 1e-12
+
+iq_int16 = np.empty((len(iq) * 2,), dtype=np.int16)
+iq_int16[0::2] = (np.real(iq) * 32767).astype(np.int16)
+iq_int16[1::2] = (np.imag(iq) * 32767).astype(np.int16)
+
+iq_int16.tofile("iq_245M.bin")
+
+
 
 # ── 7. Spectrum plot ──────────────────────────────────────────────────────────
 
