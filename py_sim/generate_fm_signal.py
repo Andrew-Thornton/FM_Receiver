@@ -218,54 +218,81 @@ iq_int16.tofile("iq_245M.bin")
 
 
 
-# ── 7. Spectrum plot ──────────────────────────────────────────────────────────
+# ── 7. Spectrum plot (MPX baseband) ──────────────────────────────────────────
 
 fig, axes = plt.subplots(3, 1, figsize=(12, 9))
 fig.suptitle("FM MPX Baseband — Frequency Analysis", fontsize=14, fontweight="bold")
 
-PLOT_SAMPLES = min(N, sample_rate * 2)   # plot up to 2 s to keep FFT fast
-freqs = np.fft.rfftfreq(PLOT_SAMPLES, d=1 / sample_rate)
+PLOT_SAMPLES = min(N, int(sample_rate * 2))
+mpx_freqs = np.fft.rfftfreq(PLOT_SAMPLES, d=1 / sample_rate)
 
 def mag_db(signal):
     spec = np.abs(np.fft.rfft(signal[:PLOT_SAMPLES]))
     spec = np.maximum(spec, 1e-12)
     return 20 * np.log10(spec / np.max(spec))
 
-# L+R spectrum
-axes[0].plot(freqs / 1e3, mag_db(LpR), color="#2196F3", linewidth=0.8)
-axes[0].set_title("L+R  (mono, 0–15 kHz)")
+# ── L+R ──────────────────────────────────────────────────────────────────────
+axes[0].plot(mpx_freqs / 1e3, mag_db(LpR), linewidth=0.8)
+axes[0].set_title("L+R (mono, 0–15 kHz)")
 axes[0].set_xlim(0, 60)
 axes[0].set_ylim(-150, 5)
 axes[0].set_ylabel("dB")
-axes[0].axvline(15, color="red", linestyle="--", linewidth=0.8, label="15 kHz LPF")
-axes[0].legend(fontsize=8)
+axes[0].axvline(15, color="red", linestyle="--")
 axes[0].grid(True, alpha=0.3)
 
-# L-R spectrum
-axes[1].plot(freqs / 1e3, mag_db(LmR), color="#4CAF50", linewidth=0.8)
-axes[1].set_title("L−R  (stereo difference, 0–15 kHz)")
+# ── L−R ──────────────────────────────────────────────────────────────────────
+axes[1].plot(mpx_freqs / 1e3, mag_db(LmR), linewidth=0.8)
+axes[1].set_title("L−R (stereo difference, 0–15 kHz)")
 axes[1].set_xlim(0, 60)
 axes[1].set_ylim(-150, 5)
 axes[1].set_ylabel("dB")
-axes[1].axvline(15, color="red", linestyle="--", linewidth=0.8, label="15 kHz LPF")
-axes[1].legend(fontsize=8)
+axes[1].axvline(15, color="red", linestyle="--")
 axes[1].grid(True, alpha=0.3)
 
-# Full MPX spectrum
-axes[2].plot(freqs / 1e3, mag_db(MPX), color="#FF5722", linewidth=0.8)
-axes[2].set_title("MPX Baseband  (L+R) + pilot@19kHz + (L−R)·cos(38kHz)")
+# ── MPX ───────────────────────────────────────────────────────────────────────
+axes[2].plot(mpx_freqs / 1e3, mag_db(MPX), linewidth=0.8)
+axes[2].set_title("MPX Baseband (L+R + pilot + L−R DSB-SC)")
 axes[2].set_xlim(0, 60)
 axes[2].set_ylim(-150, 5)
 axes[2].set_xlabel("Frequency (kHz)")
 axes[2].set_ylabel("dB")
-for freq, label in [(15, "15 kHz"), (19, "Pilot\n19 kHz"), (23, ""), (38, "Sub-carrier\n38 kHz"), (53, "")]:
-    axes[2].axvline(freq, color="gray", linestyle=":", linewidth=0.8)
-axes[2].annotate("Pilot 19 kHz",  xy=(19, -5), fontsize=7, color="gray", ha="center")
-axes[2].annotate("38 kHz SC",     xy=(38, -5), fontsize=7, color="gray", ha="center")
-axes[2].annotate("23–53 kHz DSB-SC", xy=(38, -12), fontsize=7, color="gray", ha="center")
 axes[2].grid(True, alpha=0.3)
 
 plt.tight_layout()
 plt.savefig("fm_mpx_spectrum.png", dpi=150, bbox_inches="tight")
-print("  Spectrum plot  : fm_mpx_spectrum.png")
 plt.show()
+
+print("  Saved: fm_mpx_spectrum.png")
+
+
+# ── Final spectrum at 245.76 MHz (IQ) ────────────────────────────────────────
+
+fs = 245_760_000
+
+PLOT_TIME = 0.002
+N = int(PLOT_TIME * fs)
+
+iq_plot = iq[:N]
+
+spec = np.fft.fftshift(np.fft.fft(iq_plot))
+iq_freqs = np.fft.fftshift(np.fft.fftfreq(len(iq_plot), d=1/fs))
+
+mag = 20 * np.log10(np.maximum(np.abs(spec), 1e-12))
+mag -= np.max(mag)
+
+plt.figure(figsize=(12, 5))
+plt.plot(iq_freqs / 1e6, mag, linewidth=0.8)
+
+plt.title("Final IQ Spectrum @ 245.76 MHz")
+plt.xlabel("Frequency (MHz)")
+plt.ylabel("Magnitude (dB)")
+plt.grid(True, alpha=0.3)
+
+plt.xlim(-2, 2)
+plt.ylim(-100, 5)
+
+plt.tight_layout()
+plt.savefig("iq_245M_spectrum.png", dpi=150)
+plt.show()
+
+print("  Saved: iq_245M_spectrum.png")
