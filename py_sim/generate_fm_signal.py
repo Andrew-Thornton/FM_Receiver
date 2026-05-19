@@ -12,7 +12,7 @@ Steps:
 
 import numpy as np
 import scipy.io.wavfile as wav
-from scipy.signal import butter, sosfilt
+from scipy.signal import butter, sosfilt,  firwin, lfilter, resample_poly
 import matplotlib.pyplot as plt
 
 # ── 1. Load WAV & print signal info ──────────────────────────────────────────
@@ -52,11 +52,72 @@ else:
 
 print(f"  L peak: {np.max(np.abs(L)):.4f}   R peak: {np.max(np.abs(R)):.4f}")
 
+# ── 3a. Staged ×2 upsampling using Kaiser halfband FIR ──────────────────────
+
+TARGET_RATE = 1_024_000
+
+def kaiser_halfband():
+    # Halfband FIR: efficient for ×2 interpolation
+    numtaps = 63  # increase to 127 if you want cleaner stopband
+    return firwin(
+        numtaps,
+        cutoff=0.5,  # normalized (Nyquist = 1 after upsample)
+        window=('kaiser', 8.0),
+        scale=True
+    )
+
+def upsample_x2(x, h):
+    up = np.zeros(len(x) * 2, dtype=np.float32)
+    up[::2] = x
+    return lfilter(h, 1.0, up)
+
+h = kaiser_halfband()
+
+fs = 44100
+
+L_up = L.astype(np.float32)
+R_up = R.astype(np.float32)
+
+print(f"  Start Fs: {fs}")
+
+# ×2 stages up to max allowed before exceeding target
+while fs * 2 <= TARGET_RATE:
+    L_up = upsample_x2(L_up, h)
+    R_up = upsample_x2(R_up, h)
+    fs *= 2
+    print(f"  Upsampled → {fs} Hz")
+
+# If we overshoot or cannot match exactly, go to nearest higher power-of-2 rate
+if fs < TARGET_RATE:
+    # continue to 1.4112 MHz (next valid ×2 stage)
+    while fs * 2 <= 2_000_000:  # safety cap
+        L_up = upsample_x2(L_up, h)
+        R_up = upsample_x2(R_up, h)
+        fs *= 2
+        print(f"  Extended upsample → {fs} Hz")
+
+# ── Final rational resample to exactly 1.024 MHz ────────────────────────────
+
+if fs != TARGET_RATE:
+    print(f"  Final resample: {fs} → {TARGET_RATE}")
+
+    from math import gcd
+    g = gcd(int(fs), TARGET_RATE)
+
+    up = TARGET_RATE // g
+    down = int(fs) // g
+
+    L_up = resample_poly(L_up, up, down)
+    R_up = resample_poly(R_up, up, down)
+    fs = TARGET_RATE
+
+print(f"  Final sample rate: {fs}")
+
 # ── 3. Low-pass filter at 15 kHz ─────────────────────────────────────────────
 
 CUTOFF_HZ  = 15_000          # FM audio bandwidth
 LPF_ORDER  = 8               # Butterworth order (steeper → more phase delay)
-NYQUIST    = sample_rate / 2
+NYQUIST    = fs / 2
 
 if CUTOFF_HZ >= NYQUIST:
     raise ValueError(
@@ -64,6 +125,11 @@ if CUTOFF_HZ >= NYQUIST:
     )
 
 sos = butter(LPF_ORDER, CUTOFF_HZ / NYQUIST, btype="low", output="sos")
+
+L = L_up
+R = R_up
+sample_rate = fs
+
 L_filt = sosfilt(sos, L)
 R_filt = sosfilt(sos, R)
 
@@ -137,7 +203,7 @@ def mag_db(signal):
 axes[0].plot(freqs / 1e3, mag_db(LpR), color="#2196F3", linewidth=0.8)
 axes[0].set_title("L+R  (mono, 0–15 kHz)")
 axes[0].set_xlim(0, 60)
-axes[0].set_ylim(-80, 5)
+axes[0].set_ylim(-150, 5)
 axes[0].set_ylabel("dB")
 axes[0].axvline(15, color="red", linestyle="--", linewidth=0.8, label="15 kHz LPF")
 axes[0].legend(fontsize=8)
@@ -147,7 +213,7 @@ axes[0].grid(True, alpha=0.3)
 axes[1].plot(freqs / 1e3, mag_db(LmR), color="#4CAF50", linewidth=0.8)
 axes[1].set_title("L−R  (stereo difference, 0–15 kHz)")
 axes[1].set_xlim(0, 60)
-axes[1].set_ylim(-80, 5)
+axes[1].set_ylim(-150, 5)
 axes[1].set_ylabel("dB")
 axes[1].axvline(15, color="red", linestyle="--", linewidth=0.8, label="15 kHz LPF")
 axes[1].legend(fontsize=8)
@@ -157,7 +223,7 @@ axes[1].grid(True, alpha=0.3)
 axes[2].plot(freqs / 1e3, mag_db(MPX), color="#FF5722", linewidth=0.8)
 axes[2].set_title("MPX Baseband  (L+R) + pilot@19kHz + (L−R)·cos(38kHz)")
 axes[2].set_xlim(0, 60)
-axes[2].set_ylim(-80, 5)
+axes[2].set_ylim(-150, 5)
 axes[2].set_xlabel("Frequency (kHz)")
 axes[2].set_ylabel("dB")
 for freq, label in [(15, "15 kHz"), (19, "Pilot\n19 kHz"), (23, ""), (38, "Sub-carrier\n38 kHz"), (53, "")]:
