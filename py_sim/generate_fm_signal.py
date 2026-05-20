@@ -181,16 +181,28 @@ subcarr  =             np.cos(2 * np.pi * SUBCARR_FREQ * t)
 scale = 0.45 / max(np.max(np.abs(LpR)), np.max(np.abs(LmR)), 1e-9)
 # MPX = scale * LpR + scale * LmR * subcarr
 MPX = scale * LpR + pilot + scale * LmR * subcarr
-
-# ── Convert MPX to analytic signal early ────────────────────────────────────
 MPX = MPX.astype(np.float32)
 
-MPX_complex = hilbert(MPX).astype(np.complex64)
+# ── Convert to FM  ────────────────────────────────────
 
-print("  Converted MPX → analytic (Hilbert)")
+CARRIER_FREQ  = 0e6      # e.g. 105.5 MHz
+PEAK_DEVIATION = 75_000     # ±75 kHz (broadcast standard)
 
+# Normalise MPX so its peak maps to exactly ±75 kHz deviation
+mpx_peak = np.max(np.abs(MPX)) + 1e-12
+kf = PEAK_DEVIATION / mpx_peak   # Hz per unit amplitude
 
-x = MPX_complex
+# Running integral of MPX (cumulative sum × dt)
+dt = 1.0 / sample_rate
+phase = 2 * np.pi * kf * np.cumsum(MPX) * dt
+
+# FM modulated carrier
+t = np.arange(len(MPX)) / sample_rate
+fm_signal = np.cos(2 * np.pi * CARRIER_FREQ * t + phase)
+
+# ── Upsample signal ────────────────────────────────────
+
+x = fm_signal
 fs = 1_024_000
 
 h = firwin(63, cutoff=0.5, window=('kaiser', 8.0), scale=True)
