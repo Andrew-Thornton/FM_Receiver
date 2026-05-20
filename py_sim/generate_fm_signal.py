@@ -24,7 +24,7 @@ def upsample_x2_complex(x, h):
 
 # ── 1. Load WAV & print signal info ──────────────────────────────────────────
 
-filename = "my_wav_short.wav"
+filename = "./input_files/my_wav_short.wav"
 sample_rate, data = wav.read(filename)
 
 print("=" * 50)
@@ -152,7 +152,7 @@ LmR = L_filt - R_filt      # L - R  (stereo difference, modulates sub-carrier)
 
 # Normalise LpR to ±1 for a clean mono export
 LpR_norm = LpR / max(np.max(np.abs(LpR)), 1e-9)
-lpr_file = "lpr_mono_output.wav"
+lpr_file = "./Intermediate_files/lpr_mono_output.wav"
 wav.write(lpr_file, sample_rate, LpR_norm.astype(np.float32))
 print(f"  Saved L+R      : {lpr_file}")
 
