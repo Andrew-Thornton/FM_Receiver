@@ -210,11 +210,49 @@ iq = x
 
 iq /= np.max(np.abs(iq)) + 1e-12
 
+# ── IQ amplitude scale: toggles between -512 and +512 ───────────────────────
+IQ_SCALE = 512          # peak int16 value (range -512 … +512)
+
 iq_int16 = np.empty((len(iq) * 2,), dtype=np.int16)
-iq_int16[0::2] = (np.real(iq) * 32767).astype(np.int16)
-iq_int16[1::2] = (np.imag(iq) * 32767).astype(np.int16)
+iq_int16[0::2] = (np.real(iq) * IQ_SCALE).astype(np.int16)
+iq_int16[1::2] = (np.imag(iq) * IQ_SCALE).astype(np.int16)
 
 iq_int16.tofile("iq_245M.bin")
+print(f"  Saved: iq_245M.bin  (IQ scale ±{IQ_SCALE})")
+
+# ── White-noise parameters ────────────────────────────────────────────────────
+#   NOISE_INTENSITY : float in [0, 1]
+#     0.0  = no noise
+#     0.05 = light background noise (−26 dB relative to signal peak)
+#     0.5  = heavy noise floor
+NOISE_INTENSITY = 0.5      # ← adjust here
+
+rng = np.random.default_rng(seed=42)
+noise_i = rng.standard_normal(len(iq)).astype(np.float32) * NOISE_INTENSITY
+noise_q = rng.standard_normal(len(iq)).astype(np.float32) * NOISE_INTENSITY
+
+iq_noisy_i = np.real(iq) + noise_i
+iq_noisy_q = np.imag(iq) + noise_q
+
+print(f"max(abs(iq_noisy_i)) : {max(abs(iq_noisy_i))}")
+print(f"max(abs(iq_noisy_q)) : {max(abs(iq_noisy_q))}")
+
+# Re-normalise so the noisy signal also peaks at ±IQ_SCALE in int16
+peak_noisy = np.max(np.sqrt(iq_noisy_i**2 + iq_noisy_q**2)) + 1e-12
+iq_noisy_i = iq_noisy_i / peak_noisy
+iq_noisy_q = iq_noisy_q / peak_noisy
+
+print(f"max(abs(iq_noisy_i)) (renorm): {max(abs(iq_noisy_i))}")
+print(f"max(abs(iq_noisy_q)) (renorm): {max(abs(iq_noisy_q))}")
+
+iq_noisy_int16 = np.empty((len(iq) * 2,), dtype=np.int16)
+iq_noisy_int16[0::2] = (iq_noisy_i * IQ_SCALE).astype(np.int16)
+iq_noisy_int16[1::2] = (iq_noisy_q * IQ_SCALE).astype(np.int16)
+
+print(f"max(abs(iq_noisy_int16)) (renorm): {max(abs(iq_noisy_int16))}")
+
+iq_noisy_int16.tofile("iq_245M_noisy.bin")
+print(f"  Saved: iq_245M_noisy.bin  (noise intensity {NOISE_INTENSITY})")
 
 
 
@@ -315,34 +353,58 @@ plt.show()
 print("  Saved: fm_mpx_spectrum.png")
 
 
-# ── Final spectrum at 245.76 MHz (IQ) ────────────────────────────────────────
+# ── Final spectrum at 245.76 MHz (IQ) — clean + noisy ────────────────────────
 
-fs = 245_760_000
+fs_iq = 245_760_000
 
 PLOT_TIME = 0.002
-N = int(PLOT_TIME * fs)
+N_plot = int(PLOT_TIME * fs_iq)
 
-iq_plot = iq[:N]
+# ── Helper: compute normalised dB spectrum ───────────────────────────────────
+def iq_spectrum_db(i_sig, q_sig, n):
+    c = (i_sig[:n] + 1j * q_sig[:n]).astype(np.complex64)
+    spec = np.fft.fftshift(np.fft.fft(c))
+    mag  = 20 * np.log10(np.maximum(np.abs(spec), 1e-12))
+    mag -= np.max(mag)
+    freqs = np.fft.fftshift(np.fft.fftfreq(n, d=1 / fs_iq))
+    return freqs, mag
 
-spec = np.fft.fftshift(np.fft.fft(iq_plot))
-iq_freqs = np.fft.fftshift(np.fft.fftfreq(len(iq_plot), d=1/fs))
+freqs_clean, mag_clean = iq_spectrum_db(np.real(iq),   np.imag(iq),   N_plot)
+freqs_noisy, mag_noisy = iq_spectrum_db(iq_noisy_i, iq_noisy_q, N_plot)
 
-mag = 20 * np.log10(np.maximum(np.abs(spec), 1e-12))
-mag -= np.max(mag)
+fig, (ax_clean, ax_noisy) = plt.subplots(
+    1, 2, figsize=(16, 5), sharey=True
+)
+fig.suptitle("Final IQ Spectrum @ 245.76 MHz", fontsize=13, fontweight="bold")
 
-plt.figure(figsize=(12, 5))
-plt.plot(iq_freqs / 1e6, mag, linewidth=0.8)
+# Clean
+ax_clean.plot(freqs_clean / 1e6, mag_clean, linewidth=0.8, color="steelblue")
+ax_clean.set_title("Clean  (no noise)")
+ax_clean.set_xlabel("Frequency (MHz)")
+ax_clean.set_ylabel("Magnitude (dB)")
+ax_clean.set_xlim(-2, 2)
+ax_clean.set_ylim(-100, 5)
+ax_clean.grid(True, alpha=0.3)
+ax_clean.text(
+    0.97, 0.97, f"Scale ±{IQ_SCALE}",
+    transform=ax_clean.transAxes, ha="right", va="top",
+    fontsize=8, color="steelblue"
+)
 
-plt.title("Final IQ Spectrum @ 245.76 MHz")
-plt.xlabel("Frequency (MHz)")
-plt.ylabel("Magnitude (dB)")
-plt.grid(True, alpha=0.3)
-
-plt.xlim(-2, 2)
-plt.ylim(-100, 5)
+# Noisy
+ax_noisy.plot(freqs_noisy / 1e6, mag_noisy, linewidth=0.8, color="darkorange")
+ax_noisy.set_title(f"With White Noise  (intensity = {NOISE_INTENSITY})")
+ax_noisy.set_xlabel("Frequency (MHz)")
+ax_noisy.set_xlim(-2, 2)
+ax_noisy.grid(True, alpha=0.3)
+ax_noisy.text(
+    0.97, 0.97, f"Scale ±{IQ_SCALE}",
+    transform=ax_noisy.transAxes, ha="right", va="top",
+    fontsize=8, color="darkorange"
+)
 
 plt.tight_layout()
-plt.savefig("iq_245M_spectrum.png", dpi=150)
+plt.savefig("iq_245M_spectrum.png", dpi=150, bbox_inches="tight")
 plt.show()
 
 print("  Saved: iq_245M_spectrum.png")
