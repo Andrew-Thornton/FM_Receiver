@@ -1,7 +1,7 @@
 import wave
 
-input_file = "my_wav.wav"
-output_file = "my_wav_short.wav"
+input_file = "./input_files/my_wav.wav"
+output_file = "./input_files/my_wav_short.wav"
 
 start_time = 22.0  # seconds
 end_time = 23.0    # seconds

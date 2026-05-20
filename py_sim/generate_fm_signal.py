@@ -217,8 +217,8 @@ iq_int16 = np.empty((len(iq) * 2,), dtype=np.int16)
 iq_int16[0::2] = (np.real(iq) * IQ_SCALE).astype(np.int16)
 iq_int16[1::2] = (np.imag(iq) * IQ_SCALE).astype(np.int16)
 
-iq_int16.tofile("iq_245M.bin")
-print(f"  Saved: iq_245M.bin  (IQ scale ±{IQ_SCALE})")
+iq_int16.tofile("./raw_data_files/iq_245M.bin")
+print(f"  Saved: ./raw_data_files/iq_245M.bin  (IQ scale ±{IQ_SCALE})")
 
 # ── White-noise parameters ────────────────────────────────────────────────────
 #   NOISE_INTENSITY : float in [0, 1]
@@ -251,8 +251,8 @@ iq_noisy_int16[1::2] = (iq_noisy_q * IQ_SCALE).astype(np.int16)
 
 print(f"max(abs(iq_noisy_int16)) (renorm): {max(abs(iq_noisy_int16))}")
 
-iq_noisy_int16.tofile("iq_245M_noisy.bin")
-print(f"  Saved: iq_245M_noisy.bin  (noise intensity {NOISE_INTENSITY})")
+iq_noisy_int16.tofile("./raw_data_files/iq_245M_noisy.bin")
+print(f"  Saved: ./raw_data_files/iq_245M_noisy.bin  (noise intensity {NOISE_INTENSITY})")
 
 
 
@@ -347,10 +347,10 @@ axes[2].text(19, -18, "Pilot\n19 kHz",
              color="crimson", fontweight="bold", zorder=5)
 
 plt.tight_layout()
-plt.savefig("fm_mpx_spectrum.png", dpi=150, bbox_inches="tight")
+plt.savefig("./sim_images/fm_mpx_spectrum.png", dpi=150, bbox_inches="tight")
 plt.show()
 
-print("  Saved: fm_mpx_spectrum.png")
+print("  Saved: ./sim_images/fm_mpx_spectrum.png")
 
 
 # ── Final spectrum at 245.76 MHz (IQ) — clean + noisy ────────────────────────
@@ -404,7 +404,7 @@ ax_noisy.text(
 )
 
 plt.tight_layout()
-plt.savefig("iq_245M_spectrum.png", dpi=150, bbox_inches="tight")
+plt.savefig("./sim_images/iq_245M_spectrum.png", dpi=150, bbox_inches="tight")
 plt.show()
 
-print("  Saved: iq_245M_spectrum.png")
+print("  Saved: ./sim_images/iq_245M_spectrum.png")
