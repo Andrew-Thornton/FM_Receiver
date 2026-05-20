@@ -258,6 +258,56 @@ axes[2].set_xlabel("Frequency (kHz)")
 axes[2].set_ylabel("dB")
 axes[2].grid(True, alpha=0.3)
 
+# ── Trapezium overlays ────────────────────────────────────────────────────────
+from matplotlib.patches import Polygon as MplPolygon
+from matplotlib.collections import PatchCollection
+
+_trap_top    = -50     # dB: top edge of trapezium
+_trap_bot    = -145  # dB: bottom edge of trapezium
+_trap_rise   = 1.0   # kHz: ramp width on each edge
+_trap_alpha  = 0.13
+
+def _draw_trap(ax, f_lo, f_hi, color, label, label_side="center"):
+    """Draw a filled trapezoid between f_lo and f_hi kHz with sloped sides."""
+    xs = [f_lo, f_lo + _trap_rise, f_hi - _trap_rise, f_hi,
+          f_hi, f_hi - _trap_rise, f_lo + _trap_rise, f_lo]
+    ys = [_trap_bot, _trap_top, _trap_top, _trap_bot,
+          _trap_bot, _trap_top, _trap_top, _trap_bot]
+    # Polygon: top flat, sides sloped
+    verts = list(zip(
+        [f_lo, f_lo + _trap_rise, f_hi - _trap_rise, f_hi],
+        [_trap_bot,         _trap_top, _trap_top, _trap_bot]
+    ))
+    poly = MplPolygon(verts, closed=True,
+                      facecolor=color, edgecolor=color,
+                      alpha=_trap_alpha, linewidth=1.2, zorder=2)
+    ax.add_patch(poly)
+    # Label inside the trapezium
+    if label_side == "center":
+        x_mid = (f_lo + f_hi) / 2
+    elif label_side == "left":
+        x_mid = f_lo + (f_hi - f_lo) * 0.3
+    else:
+        x_mid = f_lo + (f_hi - f_lo) * 0.7
+    ax.text(x_mid, -10, label,
+            ha="center", va="top", fontsize=8, color=color,
+            fontweight="bold", zorder=5)
+
+# L+R  0–15 kHz
+_draw_trap(axes[2], 0, 15, color="steelblue",  label="L+R\n0–15 kHz")
+
+# L-R  23–38 kHz  (lower sideband of DSB-SC)
+_draw_trap(axes[2], 23, 38, color="darkorange", label="L−R\n23–38 kHz")
+
+# L-R  38–53 kHz  (upper sideband of DSB-SC)
+_draw_trap(axes[2], 38, 53, color="darkorange", label="L−R\n38–53 kHz")
+
+# Pilot tone at 19 kHz
+axes[2].axvline(19, color="crimson", linestyle=":", linewidth=1.4, zorder=3)
+axes[2].text(19, -18, "Pilot\n19 kHz",
+             ha="center", va="top", fontsize=8,
+             color="crimson", fontweight="bold", zorder=5)
+
 plt.tight_layout()
 plt.savefig("fm_mpx_spectrum.png", dpi=150, bbox_inches="tight")
 plt.show()
