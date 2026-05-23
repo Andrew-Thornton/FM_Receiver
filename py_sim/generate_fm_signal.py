@@ -198,7 +198,7 @@ phase = 2 * np.pi * kf * np.cumsum(MPX) * dt
 
 # FM modulated carrier
 t = np.arange(len(MPX)) / sample_rate
-fm_signal = np.cos(2 * np.pi * CARRIER_FREQ * t + phase)
+fm_signal = np.exp(1j * (2 * np.pi * CARRIER_FREQ * t + phase))
 
 # ── Upsample signal ────────────────────────────────────
 
@@ -220,7 +220,21 @@ fs *= 5
 
 iq = x
 
+# ── Signal level diagnostics ──────────────────────────────────────────────────
+real_vals = np.abs(np.real(iq))
+imag_vals = np.abs(np.imag(iq))
+
+print(f"  real — max: {np.max(real_vals):.6f}  median: {np.median(real_vals):.6f}")
+print(f"  imag — max: {np.max(imag_vals):.6f}  median: {np.median(imag_vals):.6f}")
+
 iq /= np.max(np.abs(iq)) + 1e-12
+
+# ── Signal level diagnostics ──────────────────────────────────────────────────
+real_vals = np.abs(np.real(iq))
+imag_vals = np.abs(np.imag(iq))
+
+print(f"  real — max: {np.max(real_vals):.6f}  median: {np.median(real_vals):.6f}")
+print(f"  imag — max: {np.max(imag_vals):.6f}  median: {np.median(imag_vals):.6f}")
 
 # ── IQ amplitude scale: toggles between -512 and +512 ───────────────────────
 IQ_SCALE = 512          # peak int16 value (range -512 … +512)
@@ -231,6 +245,17 @@ iq_int16[1::2] = (np.imag(iq) * IQ_SCALE).astype(np.int16)
 
 iq_int16.tofile("./raw_data_files/iq_245M.bin")
 print(f"  Saved: ./raw_data_files/iq_245M.bin  (IQ scale ±{IQ_SCALE})")
+
+# ── Readback verification ─────────────────────────────────────────────────────
+verify = np.fromfile("./raw_data_files/iq_245M.bin", dtype=np.int16, count=20)
+print("\n--- iq_int16 check ---")
+
+for k in range(10):
+    print(f"k = {k} .. iq_int16 value = {iq_int16[k]}")
+    print(f"k = {k} .. iq value = {iq[k]}")
+
+print(f"\n  I range: [{verify[0::2].min()}, {verify[0::2].max()}]")
+print(f"  Q range: [{verify[1::2].min()}, {verify[1::2].max()}]")
 
 # ── White-noise parameters ────────────────────────────────────────────────────
 #   NOISE_INTENSITY : float in [0, 1]
