@@ -50,6 +50,7 @@ def cic_decimate_by2(iq: np.ndarray) -> np.ndarray:
     return r.astype(np.float64) + 1j * i.astype(np.float64)
 
 
+
 # ─── Load IQ file ─────────────────────────────────────────────────────────────
 if not os.path.exists(FILE_PATH):
     print(f"ERROR: File not found: {FILE_PATH}")
@@ -68,12 +69,26 @@ raw = np.fromfile(FILE_PATH, dtype=np.int16, count=(read_bytes // 2))
 iq = raw[0::2].astype(np.float32) + 1j * raw[1::2].astype(np.float32)
 print(f"Loaded {len(iq):,} IQ samples @ {INPUT_RATE/1e6:.2f} MHz")
 
+# ── Signal level diagnostics ──────────────────────────────────────────────────
+real_vals = np.abs(np.real(iq))
+imag_vals = np.abs(np.imag(iq))
+
+print(f"  real — max: {np.max(real_vals):.6f}  median: {np.median(real_vals):.6f}")
+print(f"  imag — max: {np.max(imag_vals):.6f}  median: {np.median(imag_vals):.6f}")
+
 # ─── Apply 12 CIC stages ──────────────────────────────────────────────────────
 signal = iq
 for stage in range(1, CIC_STAGES + 1):
     signal = cic_decimate_by2(signal)
+    signal /= DECIMATION  # 2 remove one stage of gain each time
     rate_now = INPUT_RATE / (DECIMATION ** stage)
     print(f"  Stage {stage:2d}: {len(signal):>10,} samples  @ {rate_now/1e3:.2f} kHz")
+    # ── Signal level diagnostics ──────────────────────────────────────────────────
+    real_vals = np.abs(np.real(signal))
+    imag_vals = np.abs(np.imag(signal))
+
+    print(f"  real — max: {np.max(real_vals):.6f}  median: {np.median(real_vals):.6f}")
+    print(f"  imag — max: {np.max(imag_vals):.6f}  median: {np.median(imag_vals):.6f}")
 
 print(f"\nFinal output: {len(signal):,} samples @ {OUTPUT_RATE/1e3:.3f} kHz")
 
@@ -140,6 +155,12 @@ interleaved = np.empty(len(signal) * 2, dtype=np.int16)
 interleaved[0::2] = signal.real.astype(np.int16)
 interleaved[1::2] = signal.imag.astype(np.int16)
 interleaved.tofile(out_path)
+
+# Print first 10 int16 values in hex
+print("First 10 input words (int16, hex):")
+for i, val in enumerate(interleaved[:10]):
+    print(f"size of interleaved = {sys.getsizeof(val)}")
+    print(f"  [{i}] 0x{val & 0xFFFF:04X}  ({val})")
 
 print(f"\nSaved {len(signal):,} IQ pairs → {out_path}")
 print(f"Format : interleaved int16 [I, Q, I, Q, ...]")
