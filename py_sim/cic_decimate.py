@@ -131,4 +131,18 @@ plt.tight_layout()
 out_path = "./sim_images/cic_output.png"
 plt.savefig(out_path, dpi=150, bbox_inches="tight")
 print(f"\nPlot saved → {out_path}")
+
+# ─── Save output as interleaved int16 binary ──────────────────────────────────
+rate_khz = int(OUTPUT_RATE / 1e3)
+out_path = f"./raw_data_files/decimated_data_{rate_khz}kHz.bin"
+
+interleaved = np.empty(len(signal) * 2, dtype=np.int16)
+interleaved[0::2] = signal.real.astype(np.int16)
+interleaved[1::2] = signal.imag.astype(np.int16)
+interleaved.tofile(out_path)
+
+print(f"\nSaved {len(signal):,} IQ pairs → {out_path}")
+print(f"Format : interleaved int16 [I, Q, I, Q, ...]")
+print(f"Size   : {os.path.getsize(out_path):,} bytes")
+
 plt.show()
