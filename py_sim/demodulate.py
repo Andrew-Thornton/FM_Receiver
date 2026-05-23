@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 import os
 import sys
 
-FILE_PATH  = "./raw_data_files/decimated_data_120kHz.bin"
-INPUT_RATE = 120e3  # Hz
+FILE_PATH  = "./raw_data_files/decimated_data_240kHz.bin"
+INPUT_RATE = 240e3  # Hz
 
 # ─── Load IQ file ─────────────────────────────────────────────────────────────
 if not os.path.exists(FILE_PATH):
@@ -99,9 +99,39 @@ phase_pll, Kp, Ki = run_pll(iq, loop_bw=0.01)
 inst_freq_pll = np.diff(phase_pll) / (2 * np.pi / INPUT_RATE)
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# FFT of instantaneous frequency signals
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# We FFT the instantaneous frequency (d φ/dt) rather than the raw phase ramp,
+# because the ramp's DC component would dwarf everything else and make the
+# spectrum useless.  inst_freq is already mean-centred around the carrier offset,
+# so its FFT shows the modulation spectrum directly.
+#
+# A Hann window is applied to suppress spectral leakage from the finite record.
+# The one-sided spectrum (0 → Fs/2) is shown in dB relative to the peak bin.
+
+def compute_fft_db(signal, fs):
+    """
+    Returns (freqs_hz, magnitude_dB) for the one-sided, Hann-windowed FFT
+    of `signal`, normalised so the peak = 0 dB.
+    """
+    n      = len(signal)
+    window = np.hanning(n)
+    # Coherent gain correction so windowing doesn't lower the level
+    wgain  = np.sum(window)
+    S      = np.fft.rfft(signal * window) / wgain
+    mag_db = 20 * np.log10(np.abs(S) + 1e-12)
+    mag_db -= mag_db.max()            # normalise peak to 0 dB
+    freqs  = np.fft.rfftfreq(n, d=1.0 / fs)
+    return freqs, mag_db
+
+freqs_arctan, fft_arctan_db = compute_fft_db(inst_freq_arctan, INPUT_RATE)
+freqs_pll,    fft_pll_db    = compute_fft_db(inst_freq_pll,    INPUT_RATE)
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # Plot
 # ═══════════════════════════════════════════════════════════════════════════════
-fig, axes = plt.subplots(4, 1, figsize=(14, 14))
+fig, axes = plt.subplots(6, 1, figsize=(14, 20))
 fig.suptitle("Phase Extraction — arctan+unwrap  vs  PLL", fontsize=13, fontweight="bold")
 
 # ── 1. Wrapped phase ──────────────────────────────────────────────────────────
@@ -135,6 +165,30 @@ ax.plot(t[1:], inst_freq_pll, color="#F44336", linewidth=0.5)
 ax.set_xlabel("Time (ms)")
 ax.set_ylabel("Freq (Hz)")
 ax.set_title(f"Instantaneous Frequency — PLL  (loop_bw=0.01, Kp={Kp:.4f}, Ki={Ki:.5f})")
+ax.grid(True, alpha=0.3)
+
+# ── 5. FFT of inst_freq — arctan method ──────────────────────────────────────
+ax = axes[4]
+ax.plot(freqs_arctan / 1e3, fft_arctan_db, color="#2196F3", linewidth=0.7)
+ax.set_ylabel("Magnitude (dBr)")
+ax.set_xlabel("Frequency (kHz)")
+ax.set_title("FFT of Instantaneous Frequency — arctan + unwrap")
+ax.set_ylim(-100, 5)
+ax.axhline(-3,  color="gray", linewidth=0.5, linestyle="--", label="−3 dB")
+ax.axhline(-60, color="gray", linewidth=0.5, linestyle=":",  label="−60 dB")
+ax.legend(loc="upper right", fontsize=8)
+ax.grid(True, alpha=0.3)
+
+# ── 6. FFT of inst_freq — PLL ─────────────────────────────────────────────────
+ax = axes[5]
+ax.plot(freqs_pll / 1e3, fft_pll_db, color="#F44336", linewidth=0.7)
+ax.set_ylabel("Magnitude (dBr)")
+ax.set_xlabel("Frequency (kHz)")
+ax.set_title(f"FFT of Instantaneous Frequency — PLL  (loop_bw=0.01, Kp={Kp:.4f}, Ki={Ki:.5f})")
+ax.set_ylim(-100, 5)
+ax.axhline(-3,  color="gray", linewidth=0.5, linestyle="--", label="−3 dB")
+ax.axhline(-60, color="gray", linewidth=0.5, linestyle=":",  label="−60 dB")
+ax.legend(loc="upper right", fontsize=8)
 ax.grid(True, alpha=0.3)
 
 plt.tight_layout()

@@ -16,7 +16,7 @@ import sys
 # ─── Configuration ────────────────────────────────────────────────────────────
 FILE_PATH   = "raw_data_files/iq_245M.bin"
 INPUT_RATE  = 245.76e6          # Hz
-CIC_STAGES  = 11                # number of CIC filters
+CIC_STAGES  = 10                # number of CIC filters
 DECIMATION  = 2                 # each CIC decimates by this
 TOTAL_DEC   = DECIMATION ** CIC_STAGES   # 2048
 OUTPUT_RATE = INPUT_RATE / TOTAL_DEC     # ~60 kHz
