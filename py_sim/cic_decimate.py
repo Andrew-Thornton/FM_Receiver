@@ -18,8 +18,8 @@ FILE_PATH   = "raw_data_files/iq_245M.bin"
 INPUT_RATE  = 245.76e6          # Hz
 CIC_STAGES  = 10                # number of CIC filters
 DECIMATION  = 2                 # each CIC decimates by this
-TOTAL_DEC   = DECIMATION ** CIC_STAGES   # 2048
-OUTPUT_RATE = INPUT_RATE / TOTAL_DEC     # ~60 kHz
+TOTAL_DEC   = DECIMATION ** CIC_STAGES   # 1024
+OUTPUT_RATE = INPUT_RATE / TOTAL_DEC     # ~240 kHz
 MAX_SAMPLES = 1e99       # cap read at ~67M samples to avoid OOM
 
 # ─── CIC Decimate-by-2 (integrator + comb + downsample) ───────────────────────
