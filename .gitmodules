@@ -1,0 +1,3 @@
+[submodule "sub/VHDL_Common"]
+	path = sub/VHDL_Common
+	url = https://github.com/Andrew-Thornton/VHDL_Common.git
