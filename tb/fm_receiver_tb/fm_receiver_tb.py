@@ -38,6 +38,26 @@ async def reset(dut):
     dut.srst_i.value = 0
 
 
+async def data_inputter(dut):
+    input_file = "./../../py_sim/raw_data_files/iq_245M.bin"
+
+    # Interleaved int16 pairs: [real, imag, real, imag, ...]
+    iq_samples = np.fromfile(input_file, dtype=np.int16)
+    real_samples = iq_samples[0::2]
+    imag_samples = iq_samples[1::2]
+
+    for real, imag in zip(real_samples, imag_samples):
+        dut.real_i.value = int(real)
+        dut.imag_i.value = int(imag)
+        dut.vld_i.value  = 1
+        await RisingEdge(dut.clk_i)
+
+    dut.real_i.value = 0
+    dut.imag_i.value = 0
+    dut.vld_i.value  = 0
+
+
+
 @cocotb.test()
 async def run_fm_demodulate(dut):
     dut._log.info(f"Starting run_fm_demodulate tb")
