@@ -20,5 +20,6 @@ COCOTB_TOPLEVEL = fm_receiver
 COCOTB_TEST_MODULES = fm_receiver_tb
 
 SIM_ARGS += --wave=wave.vcd
+SIM_ARGS += --dump-arrays
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
