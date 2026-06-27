@@ -1,0 +1,26 @@
+[*]
+[*] GTKWave Analyzer v3.3.116 (w)1999-2023 BSI
+[*] Fri Jun 26 12:21:54 2026
+[*]
+[dumpfile] "/home/andrew/code/FM_Receiver/tb/fm_receiver_tb/wave.vcd"
+[dumpfile_mtime] "Fri Jun 26 12:18:33 2026"
+[dumpfile_size] 126086072
+[savefile] "/home/andrew/code/FM_Receiver/tb/fm_receiver_tb/wave.gtkw"
+[timestart] 6213000000000
+[size] 1920 988
+[pos] -461 -195
+*-40.000000 7780050000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] fm_receiver.
+[sst_width] 209
+[signals_width] 194
+[sst_expanded] 1
+[sst_vpaned_height] 290
+@28
+fm_receiver.clk_i
+fm_receiver.srst_i
+fm_receiver.vld_i
+@8421
+fm_receiver.real_i[15:0]
+fm_receiver.imag_i[15:0]
+[pattern_trace] 1
+[pattern_trace] 0
