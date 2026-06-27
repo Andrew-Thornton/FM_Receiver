@@ -4,7 +4,7 @@
 -- Standard      : cocotb / Python 3
 -------------------------------------------------------------------------------
 -- Description
---   cocotb testbench for the fm_receiver entity.
+--   cocotb testbench for the fm_demodulate entity.
 --   inputs one second of fm data
 --   and the output should be a stereo output which is put into a wav file
 -------------------------------------------------------------------------------
@@ -39,7 +39,7 @@ async def reset(dut):
 
 
 async def data_inputter(dut):
-    input_file = "./../../py_sim/raw_data_files/iq_245M.bin"
+    input_file = "./../../py_sim/raw_data_files/decimated_data_240kHz.bin"
 
     # Interleaved int16 pairs: [real, imag, real, imag, ...]
     iq_samples = np.fromfile(input_file, dtype=np.int16)
@@ -59,8 +59,8 @@ async def data_inputter(dut):
 
 
 @cocotb.test()
-async def run_fm_receiver(dut):
-    dut._log.info(f"Starting run_fm_receiver tb")
+async def run_fm_demodulate(dut):
+    dut._log.info(f"Starting run_fm_demodulate tb")
     dut._log.info(f"Starting clock soon")
     cocotb.start_soon(Clock(dut.clk_i, CLOCK_PERIOD_PS, unit="ps").start())
 
@@ -77,4 +77,4 @@ async def run_fm_receiver(dut):
 
     await ClockCycles(dut.clk_i, 1000)
 
-    dut._log.info(f"run_fm_receiver tb complete") 
+    dut._log.info(f"run_fm_demodulate tb complete") 

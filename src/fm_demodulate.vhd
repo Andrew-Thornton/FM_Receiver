@@ -2,7 +2,7 @@
 -- Author        : Andrew Thornton
 -- Standard      : VHDL 2008
 -------------------------------------------------------------------------------
--- Description : a fun fm receiver project
+-- Description   : a fun fm receiver project
 -------------------------------------------------------------------------------
 
 library ieee;
@@ -35,6 +35,10 @@ architecture rtl of fm_demodulate is
   signal real_conj_z : signed(INPUT_DATA_W-1 downto 0) := (others => '0');
   signal imag_conj_z : signed(INPUT_DATA_W-1 downto 0) := (others => '0');
 
+  signal real_mult_with_prev_conj : signed(2*INPUT_DATA_W downto 0) := (others => '0');
+  signal imag_mult_with_prev_conj : signed(2*INPUT_DATA_W downto 0) := (others => '0');
+  signal mult_vld : std_logic := '0';
+
 begin
 
   process(clk_i)
@@ -50,6 +54,7 @@ begin
   complex_mult : entity vhdl_common.complex_mult
   port map(
     clk_i    => clk_i,
+    srst_i   => srst_i,
     a_real_i => real_i,
     a_imag_i => imag_i,
     b_real_i => real_conj_z,

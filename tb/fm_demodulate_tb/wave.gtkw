@@ -1,0 +1,39 @@
+[*]
+[*] GTKWave Analyzer v3.3.116 (w)1999-2023 BSI
+[*] Sat Jun 27 07:09:59 2026
+[*]
+[dumpfile] "/home/andrew/code/FM_Receiver/tb/fm_demodulate_tb/wave.vcd"
+[dumpfile_mtime] "Sat Jun 27 07:09:10 2026"
+[dumpfile_size] 6444805
+[savefile] "/home/andrew/code/FM_Receiver/tb/fm_demodulate_tb/wave.gtkw"
+[timestart] 0
+[size] 1000 600
+[pos] -1 -1
+*0.000000 1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] fm_demodulate.
+[sst_width] 209
+[signals_width] 270
+[sst_expanded] 1
+[sst_vpaned_height] 154
+@28
+fm_demodulate.clk_i
+fm_demodulate.srst_i
+fm_demodulate.vld_i
+@22
+fm_demodulate.real_i[15:0]
+fm_demodulate.imag_i[15:0]
+fm_demodulate.imag_conj_z[15:0]
+fm_demodulate.imag_mult_with_prev_conj[32:0]
+@28
+fm_demodulate.mult_vld
+@22
+fm_demodulate.real_conj_z[15:0]
+fm_demodulate.real_mult_with_prev_conj[32:0]
+@23
+fm_demodulate.left_o[15:0]
+@22
+fm_demodulate.right_o[15:0]
+@28
+fm_demodulate.b_vld_o
+[pattern_trace] 1
+[pattern_trace] 0
