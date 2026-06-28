@@ -8,6 +8,7 @@ VHDL_LIB_ORDER = vhdl_common
 
 VHDL_SOURCES_vhdl_common += $(PWD)/../../sub/VHDL_Common/src/dsp/math_utils_pkg.vhd
 VHDL_SOURCES_vhdl_common += $(PWD)/../../sub/VHDL_Common/src/dsp/complex_mult.vhd
+VHDL_SOURCES_vhdl_common += $(PWD)/../../sub/VHDL_Common/src/dsp/atan2_cordic.vhd
 VHDL_SOURCES += $(PWD)/../../src/fm_demodulate.vhd
 
 COCOTB_TOPLEVEL = fm_demodulate

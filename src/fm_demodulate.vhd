@@ -35,9 +35,19 @@ architecture rtl of fm_demodulate is
   signal real_conj_z : signed(INPUT_DATA_W-1 downto 0) := (others => '0');
   signal imag_conj_z : signed(INPUT_DATA_W-1 downto 0) := (others => '0');
 
+  signal real_conj_zz : signed(INPUT_DATA_W-1 downto 0) := (others => '0');
+  signal imag_conj_zz : signed(INPUT_DATA_W-1 downto 0) := (others => '0');
+
+  signal real_conj_zzz : signed(INPUT_DATA_W-1 downto 0) := (others => '0');
+  signal imag_conj_zzz : signed(INPUT_DATA_W-1 downto 0) := (others => '0');
+
+
   signal real_mult_with_prev_conj : signed(2*INPUT_DATA_W downto 0) := (others => '0');
   signal imag_mult_with_prev_conj : signed(2*INPUT_DATA_W downto 0) := (others => '0');
   signal mult_vld : std_logic := '0';
+
+  signal phase : signed(31 downto 0) := (others => '0');
+  signal phase_vld : std_logic := '0';
 
 begin
 
@@ -48,6 +58,10 @@ begin
         real_conj_z <= real_i;
         imag_conj_z <= 0-imag_i;
       end if;
+      real_conj_zz  <= real_conj_z;
+      imag_conj_zz  <= imag_conj_z;
+      real_conj_zzz <= real_conj_zz; -- unsure if required
+      imag_conj_zzz <= imag_conj_zz; -- unsure if required
     end if;
   end process;
 
@@ -57,14 +71,28 @@ begin
     srst_i   => srst_i,
     a_real_i => real_i,
     a_imag_i => imag_i,
-    b_real_i => real_conj_z,
-    b_imag_i => imag_conj_z,
+    b_real_i => real_conj_zz,
+    b_imag_i => imag_conj_zz,
     vld_i    => vld_i,
     c_real_o => real_mult_with_prev_conj,
     c_imag_o => imag_mult_with_prev_conj,
     vld_o    => mult_vld
   );
 
+  demod_atan2_i : entity vhdl_common.atan2_cordic
+  generic map(
+    ITERATIONS         => 16,
+    INPUT_DATA_W       => (2*INPUT_DATA_W)+1,
+    OUTPUT_DATA_W      => 32
+  )port map(
+    clk_i   => clk_i,
+    srst_i  => srst_i,
+    real_i  => real_mult_with_prev_conj,
+    imag_i  => imag_mult_with_prev_conj,
+    vld_i   => mult_vld,
+    phase_o => phase,
+    vld_o   => phase_vld
+  );
 
 
 
